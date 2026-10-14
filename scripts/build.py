@@ -61,6 +61,16 @@ def portable_html():
     shared_js=asset_text('components.js')
     yaml_js=asset_text('js-yaml.min.js')
     footer_yaml=normalized_footer_yaml()
+    # The shared footer YAML uses remote brand images online. Bundle each
+    # brand logo into the offline YAML so it can render without any fetch.
+    footer_yaml=footer_yaml.replace(
+        'https://raw.githubusercontent.com/mightora/mightora.io/main/static/images/mightoraIoLogo4-200x900.png',logo)
+    footer_yaml=footer_yaml.replace(
+        'https://raw.githubusercontent.com/mightora/mightora.io/main/static/images/TechTweedie_bw.png',
+        asset_png('TechTweedie_bw.png','TechTweedie'))
+    footer_yaml=footer_yaml.replace(
+        'https://raw.githubusercontent.com/mightora/mightora.io/main/static/images/tweedTechnologyLogoLight.png',
+        asset_png('tweedTechnologyLogoLight.png','Tweed.technology'))
     # The shared author banner image must be embedded, not fetched offline.
     banner=asset_png('ian-tweedie-presenting-4.png','Mightora')
     shared_css=shared_css.replace("url('https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/ian-tweedie-presenting-4.png')", "url('"+banner+"')")
