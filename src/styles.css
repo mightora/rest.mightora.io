@@ -27,3 +27,27 @@ body.widget-mode{background:white}body.widget-mode mightora-header,body.widget-m
 @media(max-width:1050px){.example-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.example-grid{grid-template-columns:1fr}.graph-actions .btn{flex:1}.copy-field{flex-wrap:wrap}.copy-field input{flex:1 1 100%}}
 body.widget-mode #samples,body.widget-mode #graph-explorer{display:none!important}
+
+/* Guided Entra app registration + Swagger 2.0 documentation */
+.graph-wizard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin:20px 0 26px}
+.wizard-progress{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:20px}
+.wizard-progress button{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;min-width:0;padding:9px 6px;border:1px solid var(--border);border-radius:8px;background:#f4f7fa;color:var(--fb-primary);font-size:.84rem;font-weight:700;cursor:pointer}
+.wizard-progress button span{display:grid;place-items:center;flex:none;width:25px;height:25px;border-radius:50%;background:#e0ecf0}
+.wizard-progress button.active{background:#e6f4ef;border-color:var(--fb-accent);box-shadow:inset 0 -2px var(--fb-accent)}
+.wizard-progress button.active span{background:var(--fb-primary);color:white}
+.wizard-step{max-width:840px;min-height:175px;line-height:1.75}
+.wizard-step h3{color:var(--fb-primary);font-size:1.18rem}
+.wizard-step .field-label{margin-top:17px}
+.wizard-step>input,.wizard-step>select{width:100%;max-width:660px;display:block}
+.wizard-step .notice{margin:15px 0}
+.wizard-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:16px;margin-top:20px}
+.wizard-controls>p{margin:0;font-weight:700;color:var(--muted)}
+.swagger-operation-picker{display:flex;flex-wrap:wrap;gap:9px;align-items:end}
+.swagger-operation-picker>.field-label{flex:1 1 100%;margin:8px 0 0}
+.swagger-operation-picker select{flex:1 1 250px;min-width:0}
+#swaggerFile,#swaggerHost,#swaggerTitle{display:block;width:100%;margin-bottom:12px}
+#swagger .info-card>p{line-height:1.65}
+#swagger .info-card>.field-label{margin-top:15px}
+@media(max-width:900px){.wizard-progress{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.graph-wizard{padding:15px}.wizard-progress{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-progress button{font-size:.76rem;padding:6px 4px}.wizard-controls>p{order:3;flex:1 1 100%;text-align:center}}
+body.widget-mode #swagger{display:none!important}
