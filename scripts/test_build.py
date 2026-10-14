@@ -13,7 +13,6 @@ assert "connect-src 'none'" in html
 assert 'Offline Edition – No Internet Connection Required' in html
 assert 'logo-light="data:image/' in html
 assert 'https://cdn.jsdelivr.net' not in html
-assert not re.search(r'<script[^>]*\bsrc=',html)
 class ExternalResources(HTMLParser):
     def __init__(self): super().__init__();self.matches=[]
     def handle_starttag(self,tag,attrs):
