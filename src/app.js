@@ -132,7 +132,7 @@
     const url=new URL(value);
     if(url.protocol!=='https:' && url.protocol!=='http:')throw Error('Only http:// and https:// URLs are supported.');
     if(url.username||url.password)throw Error('Credentials in URLs are not supported. Use the Auth tab instead.');
-    if(/\\{[^}]+\\}/.test(url.pathname))throw Error('This URL contains a Swagger path placeholder such as {id}. Enter a real resource ID before sending.');
+    if(/%7B[^/]+%7D/i.test(url.pathname))throw Error('This URL contains a Swagger path placeholder such as {id}. Enter a real resource ID before sending.');
     for(const item of state.params)if(item.key.trim())url.searchParams.set(item.key,item.value);
     return url.href;
   }
