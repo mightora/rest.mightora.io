@@ -5,3 +5,25 @@
 body.widget-mode{background:white}body.widget-mode mightora-header,body.widget-mode .hero,body.widget-mode .quick-jump-nav,body.widget-mode #embed,body.widget-mode #downloads,body.widget-mode #privacy,body.widget-mode #guide,body.widget-mode mightora-author,body.widget-mode .evidence,body.widget-mode mightora-footer{display:none!important}body.widget-mode .site-wrap{padding:0;width:100%;max-width:none}body.widget-mode .workspace{padding:0}body.widget-mode .section-heading{padding:13px 16px;margin:0}body.widget-mode .section-heading h2{font-size:1.15rem}body.widget-mode .section-heading p{display:none}body.widget-mode .section-heading .eyebrow{display:none}body.widget-mode .tool-shell{border:0;border-radius:0;box-shadow:none}body.widget-mode .panes{grid-template-columns:1fr}body.widget-mode .request-panel{border-right:0;border-bottom:1px solid var(--border)}body.widget-mode .tab-content{min-height:185px}body.widget-mode .response-output{min-height:160px;max-height:260px}body.widget-mode .toolbar{padding:9px}body.widget-mode .request-line{padding:12px 9px 0}body.widget-mode .request-note{padding:6px 9px}body.widget-mode .section-heading .pill{display:none}
 
 .offline-nav{display:flex;flex-wrap:wrap;gap:16px;padding:0 25px 13px;background:#fff}.offline-nav a{font-weight:750;font-size:.87rem}.offline-nav-toggle{display:none;margin-left:auto;background:#fff;color:#17355d;border:1px solid #c8d7e2;border-radius:7px;padding:7px 10px}.offline-nav:not([hidden]){display:flex}@media(max-width:570px){.offline-nav-toggle{display:block}.offline-nav{display:none;flex-direction:column}.offline-nav[hidden]{display:none!important}}
+/* ── Public API recipes and Microsoft Graph / Entra guidance ───── */
+.example-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:20px 0}
+.example-card{display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 18px rgba(27,58,87,.04);min-width:0}
+.example-card h4{font-size:1.05rem;color:var(--fb-primary);line-height:1.35;margin:0}
+.example-card p{margin:0;overflow-wrap:anywhere}.example-card .field-help{flex:1}
+.example-card .btn{margin-top:6px}.example-method{display:inline-block;background:#e4f6f1;color:#12665c;border:1px solid #b9e3d8;border-radius:6px;font-size:.74rem;font-weight:800;padding:3px 9px;letter-spacing:.04em}
+.setup-steps{margin:12px 0 20px;padding-left:23px;display:grid;gap:17px;line-height:1.65}
+.setup-steps li{padding-left:5px}.setup-steps li::marker{color:var(--fb-primary);font-weight:800}
+.setup-steps strong{color:var(--fb-primary)}.setup-steps a,.graph-explain a{font-weight:700}
+.graph-connect-card>.field-label{margin-top:16px}
+.graph-connect-card>input,.graph-connect-card>select{display:block;width:100%}
+.graph-connect-card>.field-help{margin:6px 0 12px}
+.copy-field{display:flex;gap:7px;align-items:stretch;max-width:100%}
+.copy-field input{flex:1;min-width:0;font-size:.83rem}
+.graph-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+.connection-status{padding:12px 14px;background:#eff7f5;border:1px solid #c4e2db;border-radius:9px;color:#14564c;overflow-wrap:anywhere}
+.connection-status.error{background:#fff4f1;border-color:#e8bcae;color:#8c3a27}
+.graph-samples-title{margin:28px 0 10px}.graph-explain{margin-top:25px}
+.graph-connect-card .field-help,.example-card .field-help{line-height:1.6}
+@media(max-width:1050px){.example-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.example-grid{grid-template-columns:1fr}.graph-actions .btn{flex:1}.copy-field{flex-wrap:wrap}.copy-field input{flex:1 1 100%}}
+body.widget-mode #samples,body.widget-mode #graph-explorer{display:none!important}
