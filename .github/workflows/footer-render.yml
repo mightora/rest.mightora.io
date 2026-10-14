@@ -1,0 +1,57 @@
+name: Footer rendering verification
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/footer-render.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  footer-dom:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check rendered desktop and offline DOM
+        run: |
+          set -euo pipefail
+          chrome=$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)
+          if [ -z "$chrome" ]; then
+            echo "Chromium/Chrome unavailable on this runner" >&2
+            exit 1
+          fi
+          echo "Chrome binary: $chrome"
+          curl --fail --location --show-error --silent --retry 3 \
+            https://rest.mightora.io/downloads/rest-studio-offline.html \
+            -o /tmp/rest-studio-offline.html
+          timeout 60s "$chrome" --headless --no-sandbox --disable-gpu \
+            --disable-dev-shm-usage --virtual-time-budget=9000 \
+            --dump-dom https://rest.mightora.io/ \
+            > /tmp/rest-live-dom.html 2>/tmp/rest-live-chrome.log
+          timeout 60s "$chrome" --headless --no-sandbox --disable-gpu \
+            --disable-dev-shm-usage --allow-file-access-from-files \
+            --virtual-time-budget=9000 \
+            --dump-dom file:///tmp/rest-studio-offline.html \
+            > /tmp/rest-offline-dom.html 2>/tmp/rest-offline-chrome.log
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for mode,filename in [('live','/tmp/rest-live-dom.html'),('offline','/tmp/rest-offline-dom.html')]:
+              text=Path(filename).read_text()
+              cols=len(re.findall(r'class="footer-col"',text))
+              heading=re.findall(r'class="footer-section-title">([^<]+)',text)
+              brands=len(re.findall(r'class="footer-brand"',text))
+              author=text.index('<mightora-author')
+              footer=text.index('<mightora-footer')
+              evidence=text.index('id="evidence"')
+              print(f'{mode}: columns={cols}, brand links={brands}, headings={heading}')
+              assert cols==3, f'{mode}: expected 3 shared footer columns'
+              assert brands>=3, f'{mode}: expected shared brand card links'
+              assert evidence<author<footer, f'{mode}: author must precede footer'
+              assert 'https://mightora.io/about/' in text, f'{mode}: main-site relative links not corrected'
+              if mode=='offline':
+                  assert "connect-src 'none'" in text, 'offline should block network connections'
+                  assert 'data:image/png;base64' in text, 'offline brand imagery must be embedded'
+          print('PASS: live and offline Mightora footer render all shared columns, brands, and correct ordering')
+          PY
+          echo "### Footer rendering verification" >> "$GITHUB_STEP_SUMMARY"
+          echo "Live and offline footer navigation, brand cards, and layout ordering verified." >> "$GITHUB_STEP_SUMMARY"
