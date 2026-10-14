@@ -2,7 +2,7 @@
 """Build hosted and local-only editions from the SAME maintained HTML/CSS/JS."""
 from pathlib import Path
 from html import escape
-import os, re, base64, shutil, zipfile
+import os, re, base64, shutil, zipfile, json
 
 ROOT=Path(__file__).resolve().parents[1]
 DIST=ROOT/'dist'
@@ -23,13 +23,47 @@ def logo_data():
         raise RuntimeError('Official logo missing; release requires its exact original image')
     return placeholder('mightora.io')
 
+def asset_text(name):
+    path=ROOT/'assets'/name
+    if path.exists():
+        return path.read_text(encoding='utf8')
+    if os.environ.get('REQUIRE_OFFICIAL_LOGO')=='1':
+        raise RuntimeError('Missing required bundled shared UI asset: '+name)
+    return ''
+
+def asset_png(name, fallback):
+    path=ROOT/'assets'/name
+    if path.exists():
+        data=path.read_bytes()
+        assert data[:8]==b'\\x89PNG\\r\\n\\x1a\\n'.decode('unicode_escape').encode('latin1'), 'Expected PNG for '+name
+        return 'data:image/png;base64,'+base64.b64encode(data).decode()
+    if os.environ.get('REQUIRE_OFFICIAL_LOGO')=='1':
+        raise RuntimeError('Missing required shared UI image: '+name)
+    return placeholder(fallback)
+
+def normalized_footer_yaml():
+    yaml=asset_text('footer.yaml')
+    # The shared Mightora footer contains root-relative corporate links.
+    # Ensure these resolve to Mightora.io, not /about on each tools subdomain.
+    return re.sub(r'(?m)^(\\s*url:\\s*)"/([^"]+)"',
+                  lambda m: m.group(1)+'"https://mightora.io/'+m.group(2)+'"', yaml)
+
 def portable_html():
     source=(ROOT/'index.html').read_text(encoding='utf8')
     css=(ROOT/'src/styles.css').read_text(encoding='utf8')
     js=(ROOT/'src/app.js').read_text(encoding='utf8')
     assert '</script' not in js.lower(), 'Unsafe closing script tag in source'
     logo=logo_data()
-    source=source.replace('<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/shared.css">','')
+    shared_css=asset_text('shared.css')
+    shared_js=asset_text('components.js')
+    yaml_js=asset_text('js-yaml.min.js')
+    footer_yaml=normalized_footer_yaml()
+    # The shared author banner image must be embedded, not fetched offline.
+    banner=asset_png('ian-tweedie-presenting-4.png','Mightora')
+    shared_css=shared_css.replace("url('https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/ian-tweedie-presenting-4.png')", "url('"+banner+"')")
+    for body in (shared_js, yaml_js):
+        assert '</script' not in body.lower(), 'Unexpected closing script tag in shared UI'
+    source=source.replace('<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/shared.css">','<style>'+shared_css+'</style>')
     source=source.replace('<link rel="stylesheet" href="src/styles.css">','<style>'+css.replace('</style','<\\/style')+'''
 .offline-nav{display:flex;flex-wrap:wrap;gap:18px;background:#fff;padding:10px 24px;border-bottom:1px solid #ddd}
 .offline-nav a{color:#17355d;font-weight:700}
@@ -39,12 +73,15 @@ def portable_html():
     favicon=(ROOT/'assets/favicon.svg').read_text(encoding='utf8')
     source=source.replace('<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">','<link rel="icon" type="image/svg+xml" href="'+svg_data(favicon)+'">')
     source=re.sub(r'<script>\s*// Required Mightora footer\.yaml.*?</script>','',source,flags=re.DOTALL)
-    source=source.replace('<script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>','')
-    source=source.replace('<script defer src="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/components.js"></script>','')
-    source=source.replace('<script defer src="src/app.js"></script>','<script>window.MIGHTORA_OFFLINE=true;</script><script>\n'+js+'\n</script>')
+    source=source.replace('<script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>','<script>'+yaml_js+'</script>')
+    source=source.replace('<script defer src="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/components.js"></script>','<script>'+shared_js+'</script>')
+    # The offline edition intercepts all fetch calls: only the bundled YAML
+    # receives an in-memory Response. No actual resource is requested.
+    shim='window.MIGHTORA_OFFLINE=true; const footerYaml='+json.dumps(footer_yaml)+'; window.fetch=(input)=>{const url=typeof input==="string"?input:input.url;return url.includes("footer.yaml")?Promise.resolve(new Response(footerYaml,{status:200,headers:{"Content-Type":"text/yaml"}})):Promise.reject(new TypeError("Offline edition blocks network requests"));};'
+    source=source.replace('<script defer src="src/app.js"></script>','<script>'+shim+'</script><script>\n'+js+'\n</script>')
     source=source.replace(LOGO,logo)
-    source=source.replace('https://techtweedie.github.io/images/author/ian-tweedie-sq2_hu_a380911c6f4726de.png',placeholder('IT'))
-    source=source.replace('https://raw.githubusercontent.com/TechTweedie/techtweedie.github.io/v2/assets/images/site/main-logo.png',placeholder('TT'))
+    source=source.replace('https://techtweedie.github.io/images/author/ian-tweedie-sq2_hu_a380911c6f4726de.png',asset_png('ian-tweedie-sq2.png','IT'))
+    source=source.replace('https://raw.githubusercontent.com/TechTweedie/techtweedie.github.io/v2/assets/images/site/main-logo.png',asset_png('main-logo.png','TT'))
     # Replace third-party evidence badge images with text linking to the same evidence.
     source=re.sub(r'<img alt="Build and deploy status" src="[^"]+">','<span class="evidence-label">Build and deployment evidence ↗</span>',source)
     source=re.sub(r'<img alt="CodeQL analysis status" src="[^"]+">','<span class="evidence-label">CodeQL workflow ↗</span>',source)
@@ -65,6 +102,8 @@ def main():
         target.parent.mkdir(parents=True,exist_ok=True)
         shutil.copy2(ROOT/relative,target)
     (DIST/'.nojekyll').write_text('')
+    # The online footer uses the latest official shared YAML at build time.
+    (DIST/'footer.yaml').write_text(normalized_footer_yaml(), encoding='utf8')
     offline=portable_html()
     html_path=DOWNLOADS/'rest-studio-offline.html'
     html_path.write_text(offline,encoding='utf8')
