@@ -9,13 +9,10 @@
   const MAX_RESPONSE = 2 * 1024 * 1024;
   const STORAGE = 'mightora-rest-studio-v1';
   const DEMO = 'local://demo';
-  const sampleData = {
-    local:{method:'GET',url:DEMO,params:[{key:'sample',value:'true'}],headers:[],body:'',bodyType:'none'},
-    github:{method:'GET',url:'https://api.github.com/repos/mightora/shared-ui',params:[],headers:[{key:'Accept',value:'application/vnd.github+json'}],body:'',bodyType:'none'},
-    jsonplaceholder:{method:'GET',url:'https://jsonplaceholder.typicode.com/posts/1',params:[],headers:[],body:'',bodyType:'none'},
-    dataverse:{method:'GET',url:'https://YOUR-ORG.crm4.dynamics.com/api/data/v9.2/accounts',params:[{key:'$top',value:'5'},{key:'$select',value:'name,accountid'}],headers:[{key:'Accept',value:'application/json'},{key:'OData-Version',value:'4.0'}],body:'',bodyType:'none'},
-    graph:{method:'GET',url:'https://graph.microsoft.com/v1.0/me',params:[],headers:[{key:'Accept',value:'application/json'}],body:'',bodyType:'none'}
-  };
+  const examples = window.MightoraExamples;
+  const sampleData = Object.fromEntries(examples.catalogue.map(item=>[item.id,item.request]));
+  let activeGraphScope = '';
+  let activeSampleId = '';
   let state = structuredClone(sampleData.local);
   let saved = [];
   let controller = null;
@@ -87,10 +84,24 @@
     if(type==='bearer')fields=[['authToken','Access token','password']];
     if(type==='basic')fields=[['authUser','Username','text'],['authPass','Password','password']];
     if(type==='apikey')fields=[['authKeyName','Header name','text'],['authKeyValue','API key','password']];
+    if(type==='entra'){
+      const p=document.createElement('p');p.className='field-help';
+      p.textContent='Use the Microsoft Graph Explorer section to register your own Entra SPA, sign in and request a delegated Graph permission. The temporary token is never shown or saved.';
+      host.append(p);
+      const a=document.createElement('a');a.href='#graph-explorer';a.textContent='Open Microsoft Graph Explorer ↗';host.append(a);
+    }
     for(const [id,name,inputType] of fields){const row=document.createElement('div');row.className='auth-row';const label=document.createElement('label');label.className='field-label';label.htmlFor=id;label.textContent=name;const input=document.createElement('input');input.id=id;input.type=inputType;input.autocomplete='off';input.placeholder=name;if(id==='authKeyName')input.value='X-API-Key';row.append(label,input);host.append(row);}
   }
   function currentState(){syncURL();state.method=$('method').value;state.body=$('body').value;state.bodyType=$('bodyType').value;return safePayload(state);}
-  function loadRequest(data){state=safePayload(data);$('authType').value='none';render();notify('Ready to send');}
+  function loadRequest(data,id=''){
+    state=safePayload(data);activeSampleId=id;
+    const selected=examples.get(id);
+    activeGraphScope=selected?.scope||'';
+    $('authType').value=selected?.group==='graph'?'entra':'none';
+    if(activeGraphScope)$('graphScope').value=activeGraphScope;
+    render();updateGraphStatus();
+    notify(selected?('Loaded: '+selected.label+'. Press Send request when ready.'):'Ready to send');
+  }
   function selectTab(name){activeTab=name;document.querySelectorAll('[data-tab]').forEach(btn=>{const yes=btn.dataset.tab===name;btn.classList.toggle('active',yes);btn.setAttribute('aria-selected',String(yes));});document.querySelectorAll('.tab-content').forEach(el=>el.hidden=el.id!=='view-'+name);}
   function changeResponse(view){responseView=view;document.querySelectorAll('[data-response]').forEach(btn=>{const yes=btn.dataset.response===view;btn.classList.toggle('active',yes);btn.setAttribute('aria-selected',String(yes));});$('responseOutput').textContent=response[view] || (response.raw?'(empty)':'No response yet');}
   function renderSaved(){const list=$('savedList');list.replaceChildren();if(!saved.length){const li=document.createElement('li');li.textContent='Nothing saved yet.';list.append(li);return;}
@@ -108,6 +119,11 @@
       if(user||pass){const binary=new TextEncoder().encode(user+':'+pass);headers.set('Authorization','Basic '+btoa([...binary].map(x=>String.fromCharCode(x)).join('')));}
     }
     if(auth==='apikey' && $('authKeyValue')?.value)headers.set($('authKeyName')?.value||'X-API-Key',$('authKeyValue').value);
+    if(auth==='entra'){
+      // Never attach the user's delegated token to an arbitrary API.
+      const accessToken=window.MightoraEntra.bearer(finalURL(),activeGraphScope);
+      headers.set('Authorization','Bearer '+accessToken);
+    }
     if(!METHOD_WITHOUT_BODY.has(state.method) && state.bodyType==='json' && !headers.has('Content-Type'))headers.set('Content-Type','application/json');
     return headers;
   }
@@ -165,6 +181,7 @@
     finally{clearTimeout(timer);controller=null;$('sendRequest').disabled=false;$('cancelRequest').hidden=true;refreshNetwork();}
   }
   function curlString(){
+    if($('authType').value==='entra')throw Error('For your safety, REST Studio does not copy a signed-in Microsoft Graph token into a cURL command. Use the in-browser Send button.');
     state=currentState();const url=finalURL();const escape=s=>"'"+String(s).replace(/'/g,"'\\''")+"'";
     const parts=['curl','-X',state.method,escape(url)];
     const headers=makeHeaders();headers.forEach((value,key)=>{parts.push('-H',escape(key+': '+value));});
@@ -184,10 +201,94 @@
     [...set].sort().forEach(s=>{const item=document.createElement('li');item.textContent=s;list.append(item);});
     $('networkNote').textContent=offline?'Offline edition: external site assets are embedded; live API sending is disabled. No analytics or telemetry.':`Online edition: ${resources.length} resource entries currently exposed by Resource Timing. This may omit earlier entries and browser-internal requests.`;
   }
+
+  function renderExampleGallery(){
+    const select=$('sampleSelect');
+    select.replaceChildren(new Option('Load a sample…',''));
+    for(const [group,label] of Object.entries(examples.groups)){
+      const items=examples.catalogue.filter(e=>e.group===group);
+      if(!items.length)continue;
+      const section=document.createElement('optgroup');section.label=label;
+      for(const item of items)section.append(new Option(item.label,item.id));
+      select.append(section);
+    }
+    for(const [group,elementId] of [['public','publicSampleGrid'],['graph','graphSampleGrid']]){
+      const host=$(elementId);host.replaceChildren();
+      const items=examples.catalogue.filter(e=>e.group===group || (group==='public' && e.group==='local'));
+      for(const item of items){
+        const card=document.createElement('article');card.className='example-card';
+        const badge=document.createElement('span');badge.className='example-method';badge.textContent=item.request.method;
+        const title=document.createElement('h4');title.textContent=item.label;
+        const p=document.createElement('p');p.textContent=item.description;
+        const detail=document.createElement('p');detail.className='field-help';
+        detail.textContent=item.scope ? ('Permission: '+item.scope+' — '+examples.scopeHelp[item.scope]) : item.notes;
+        const btn=document.createElement('button');btn.type='button';btn.className='btn small subtle';
+        btn.textContent='Load in builder ↗';
+        btn.setAttribute('aria-label','Load '+item.label+' in REST request builder');
+        btn.addEventListener('click',()=>{
+          loadRequest(item.request,item.id);
+          $('sampleSelect').value=item.id;
+          if(item.group==='graph')selectTab('auth');
+          $('workspace').scrollIntoView({behavior:'smooth',block:'start'});
+        });
+        card.append(badge,title,p,detail,btn);host.append(card);
+      }
+    }
+  }
+  function updateGraphStatus(message='',isError=false) {
+    const session=window.MightoraEntra.current();
+    const status=$('graphConnectionStatus');
+    if(message){
+      status.textContent=message;status.classList.toggle('error',isError);
+    } else if(session) {
+      const time=new Date(session.expiresAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      status.textContent='Connected to '+session.tenant+' with delegated '+session.scope+'. Access expires around '+time+'. No token is saved.';
+      status.classList.remove('error');
+    } else {
+      status.textContent='Not connected. Choose a read-only permission and sign in to use Graph requests.';
+      status.classList.remove('error');
+    }
+  }
+  function initGraphExplorer(){
+    const redirect=offline?'https://rest.mightora.io/auth-callback.html':new URL('auth-callback.html',location.href).href;
+    $('graphRedirect').value=redirect;
+    $('copyGraphRedirect').addEventListener('click',()=>copy(redirect));
+    function scopeDescription(){
+      const value=$('graphScope').value;
+      $('graphScopeDescription').textContent=examples.scopeHelp[value]||'Select a delegated permission.';
+    }
+    $('graphScope').addEventListener('change',scopeDescription);
+    scopeDescription();
+    if(offline || widget){
+      $('graphConnect').disabled=true;
+      updateGraphStatus(offline
+        ? 'Offline edition: Microsoft sign-in is disabled. Use the hosted app to connect.'
+        : 'Embedded panel: open REST Studio in a full tab to complete Microsoft sign-in safely.');
+    }else updateGraphStatus();
+    $('graphDisconnect').addEventListener('click',()=>{
+      window.MightoraEntra.disconnect();
+      updateGraphStatus('Disconnected locally. Microsoft may still remember your browser sign-in; no token is retained here.');
+    });
+    $('graphConnect').addEventListener('click',async()=>{
+      if(offline||widget)return;
+      const btn=$('graphConnect');btn.disabled=true;
+      updateGraphStatus('Opening Microsoft sign-in…');
+      try{
+        await window.MightoraEntra.login({
+          tenant:$('graphTenant').value,clientId:$('graphClient').value,scope:$('graphScope').value
+        });
+        updateGraphStatus();
+        notify('Microsoft Graph connection ready. Load a Graph sample and press Send.');
+      }catch(error){
+        updateGraphStatus(error.message,true);
+      }finally{btn.disabled=false;}
+    });
+  }
   function init(){
     if(widget)document.body.classList.add('widget-mode');
     if(offline){$('offlineBanner').hidden=false;$('modeNote').textContent='Offline mode: live API calls are disabled. Build requests, try the local demo, save locally, and export cURL.';document.querySelectorAll('.badge-links img').forEach(img=>{const span=document.createElement('span');span.textContent=img.alt+' ↗';span.className='evidence-label';img.replaceWith(span);});}
     readSaved();render();selectTab('params');changeResponse('pretty');
+    renderExampleGallery();initGraphExplorer();
     for(const tab of document.querySelectorAll('[data-tab]'))tab.addEventListener('click',()=>selectTab(tab.dataset.tab));
     for(const tab of document.querySelectorAll('[data-response]'))tab.addEventListener('click',()=>changeResponse(tab.dataset.response));
     $('addParam').addEventListener('click',()=>{state.params.push({key:'',value:''});renderRows('params');});
@@ -195,10 +296,11 @@
     $('method').addEventListener('change',()=>{state.method=$('method').value;$('requestDetail').textContent=state.method+' request';});
     $('bodyType').addEventListener('change',()=>{$('body').disabled=$('bodyType').value==='none';});
     $('authType').addEventListener('change',renderAuthFields);
+    $('url').addEventListener('input',()=>{activeGraphScope='';activeSampleId='';});
     $('sendRequest').addEventListener('click',send);
     $('cancelRequest').addEventListener('click',()=>controller?.abort());
     $('newRequest').addEventListener('click',()=>{loadRequest({method:'GET',url:'',headers:[],params:[],body:'',bodyType:'none'});});
-    $('sampleSelect').addEventListener('change',event=>{const data=sampleData[event.target.value];if(data)loadRequest(data);});
+    $('sampleSelect').addEventListener('change',event=>{const id=event.target.value;const data=sampleData[id];if(data)loadRequest(data,id);});
     $('formatBody').addEventListener('click',formatBody);
     $('copyCurl').addEventListener('click',()=>{try{if($('authType').value!=='none'&&!confirm('Copied cURL may include the credentials you entered. Copy this command?'))return;copy(curlString());}catch(error){displayError(error);}});
     $('copyResponse').addEventListener('click',()=>copy(response[responseView]||''));
