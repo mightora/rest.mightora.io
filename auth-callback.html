@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'; object-src 'none'">
+  <title>Finishing Microsoft sign-in · Mightora REST Studio</title>
+  <style>body{font:16px system-ui,sans-serif;color:#17355d;max-width:40rem;margin:15vh auto;padding:2rem}p{line-height:1.6}</style>
+</head>
+<body>
+  <h1>Finishing Microsoft sign-in</h1>
+  <p id="authMessage" role="status">Returning you to REST Studio…</p>
+  <script>
+    (() => {
+      'use strict';
+      const params = new URLSearchParams(location.search);
+      const state = params.get('state') || '';
+      const code = params.get('code') || '';
+      const error = params.get('error') || '';
+      const errorDescription = params.get('error_description') || '';
+      // Remove the one-time authorisation code from URL/history immediately.
+      history.replaceState(null, '', location.pathname);
+      const message = {type:'mightora-rest-entra-callback',state,code,error,errorDescription};
+      if (!/^[a-f0-9]{32,128}$/.test(state) || (!code && !error)) {
+        document.getElementById('authMessage').textContent='No valid sign-in response was received. Return to REST Studio and try again.';
+        return;
+      }
+      try { if (window.opener && !window.opener.closed) window.opener.postMessage(message,location.origin); } catch {}
+      try {
+        const channel = new BroadcastChannel('mightora-rest-auth-'+state);
+        channel.postMessage(message);
+        setTimeout(()=>channel.close(),1000);
+      } catch {}
+      document.getElementById('authMessage').textContent='Sign-in response sent. You can close this window.';
+      setTimeout(()=>window.close(),1500);
+    })();
+  </script>
+</body>
+</html>
