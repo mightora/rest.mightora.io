@@ -132,6 +132,7 @@
     const url=new URL(value);
     if(url.protocol!=='https:' && url.protocol!=='http:')throw Error('Only http:// and https:// URLs are supported.');
     if(url.username||url.password)throw Error('Credentials in URLs are not supported. Use the Auth tab instead.');
+    if(/\\{[^}]+\\}/.test(url.pathname))throw Error('This URL contains a Swagger path placeholder such as {id}. Enter a real resource ID before sending.');
     for(const item of state.params)if(item.key.trim())url.searchParams.set(item.key,item.value);
     return url.href;
   }
@@ -284,11 +285,120 @@
       }finally{btn.disabled=false;}
     });
   }
+
+  let wizardStep = 0;
+  let importedSwagger = null;
+  function showGraphWizardStep(number){
+    wizardStep=Math.max(0,Math.min(4,number));
+    for(const el of document.querySelectorAll('[data-graph-step]'))el.hidden=Number(el.dataset.graphStep)!==wizardStep;
+    for(const el of document.querySelectorAll('[data-go-step]')){
+      const current=Number(el.dataset.goStep)===wizardStep;
+      if(current)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');
+      el.classList.toggle('active',current);
+    }
+    $('graphWizardBack').disabled=wizardStep===0;
+    $('graphWizardNext').textContent=wizardStep===4?'Open request builder ↗':'Next step →';
+    $('graphWizardStatus').textContent='Step '+(wizardStep+1)+' of 5';
+  }
+  function initGraphWizard(){
+    showGraphWizardStep(0);
+    for(const btn of document.querySelectorAll('[data-go-step]')){
+      btn.addEventListener('click',()=>showGraphWizardStep(Number(btn.dataset.goStep)));
+    }
+    $('graphWizardBack').addEventListener('click',()=>showGraphWizardStep(wizardStep-1));
+    $('graphWizardNext').addEventListener('click',()=>{
+      if(wizardStep===2){
+        const tenant=$('graphTenant').value.trim(),client=$('graphClient').value.trim();
+        const guid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const domain=/^(?:[a-z0-9][a-z0-9-]{0,61}\\.)+[a-z]{2,63}$/i;
+        if(!guid.test(client)||!(guid.test(tenant)||domain.test(tenant))){
+          updateGraphStatus('Enter the correct Application ID and tenant ID (or tenant domain) before continuing.',true);
+          $('graphWizardStatus').textContent='Check the two IDs in Step 3';
+          return;
+        }
+      }
+      if(wizardStep===4){$('workspace').scrollIntoView({behavior:'smooth',block:'start'});return;}
+      showGraphWizardStep(wizardStep+1);
+    });
+    $('wizardLoadMe').addEventListener('click',()=>{
+      const example=examples.get('graph');
+      loadRequest(example.request,example.id);
+      $('sampleSelect').value=example.id;
+      selectTab('auth');
+      $('workspace').scrollIntoView({behavior:'smooth',block:'start'});
+    });
+  }
+  function reportSwagger(message,error=false){
+    $('swaggerStatus').textContent=message;
+    $('swaggerStatus').style.color=error?'#a64c2b':'';
+  }
+  function initSwagger(){
+    const browse=$('swaggerFile'),picker=$('swaggerOperations');
+    function loadOperation(op){
+      let request=structuredClone(op.request);
+      // Ask the developer for every unresolved path parameter instead of
+      // guessing resource identifiers or sending a literal {id} URL.
+      for(const param of op.pathParams||[]){
+        const value=window.prompt('Path parameter "'+param.key+'": enter a value for '+op.path,param.value||'');
+        if(value===null)return;
+        if(!value.trim()){reportSwagger('Enter a value for '+param.key+' before loading the operation.',true);return;}
+        request.url=request.url.replace('{'+param.key+'}',encodeURIComponent(value.trim()));
+      }
+      loadRequest(request);
+      $('sampleSelect').value='';
+      $('workspace').scrollIntoView({behavior:'smooth',block:'start'});
+      notify('Imported Swagger operation: '+op.label+'. Review headers and values before sending.');
+    }
+    picker.addEventListener('change',()=>{$('loadSwaggerOperation').disabled=!picker.value;});
+    $('loadSwaggerOperation').addEventListener('click',()=>{
+      const item=importedSwagger?.operations[Number(picker.value)];
+      if(item)loadOperation(item);
+    });
+    $('saveSwaggerOperations').addEventListener('click',()=>{
+      if(!importedSwagger)return;
+      const available=Math.max(0,60-saved.length);
+      const newOps=importedSwagger.operations.slice(0,available).map(o=>safeSaved(o.request));
+      saved=[...newOps,...saved].slice(0,60);
+      persist();renderSaved();
+      reportSwagger('Saved '+newOps.length+' Swagger operations in this browser (60 total request limit, secrets excluded). Select the Saved tab to open them.');
+    });
+    browse.addEventListener('change',async()=>{
+      const file=browse.files?.[0];
+      if(!file)return;
+      picker.disabled=true;picker.replaceChildren(new Option('Import a Swagger 2.0 file first…',''));
+      $('loadSwaggerOperation').disabled=true;$('saveSwaggerOperations').disabled=true;
+      try{
+        if(file.size>2*1024*1024)throw Error('The file must be 2 MiB or smaller.');
+        const doc=await file.text();
+        const imported=window.MightoraSwagger.importSwagger(doc,$('swaggerHost').value.trim());
+        importedSwagger=imported;
+        picker.replaceChildren(new Option('Choose an API operation…',''));
+        imported.operations.forEach((o,i)=>picker.add(new Option(o.method+' '+o.path+' — '+o.label,String(i))));
+        picker.disabled=false;$('saveSwaggerOperations').disabled=false;
+        reportSwagger('Imported '+imported.operations.length+' operations from "'+imported.title+'". Choose one to load, or save them locally.');
+      }catch(error){importedSwagger=null;reportSwagger(error.message,true);}
+      finally{browse.value='';}
+    });
+    function exportAs(format){
+      try{
+        const title=$('swaggerTitle').value.trim()||'REST Studio API';
+        const current=safeSaved(currentState());
+        const result=window.MightoraSwagger.exportSwagger([current,...saved],title);
+        const yaml=format==='yaml';
+        if(yaml&&!window.jsyaml?.dump)throw Error('YAML exporter unavailable. Please export Swagger 2.0 as JSON.');
+        const content=yaml?window.jsyaml.dump(result.doc,{noRefs:true,lineWidth:120}):JSON.stringify(result.doc,null,2);
+        download(content,'mightora-swagger-2.0.'+(yaml?'yaml':'json'),yaml?'text/yaml':'application/json');
+        reportSwagger('Exported '+result.count+' operations for '+result.host+'. '+(result.skipped?'Skipped '+result.skipped+' operations on other hosts or with the same path and method. ':'')+'Review the definition before sharing.');
+      }catch(error){reportSwagger(error.message,true);}
+    }
+    $('exportSwaggerJson').addEventListener('click',()=>exportAs('json'));
+    $('exportSwaggerYaml').addEventListener('click',()=>exportAs('yaml'));
+  }
   function init(){
     if(widget)document.body.classList.add('widget-mode');
     if(offline){$('offlineBanner').hidden=false;$('modeNote').textContent='Offline mode: live API calls are disabled. Build requests, try the local demo, save locally, and export cURL.';document.querySelectorAll('.badge-links img').forEach(img=>{const span=document.createElement('span');span.textContent=img.alt+' ↗';span.className='evidence-label';img.replaceWith(span);});}
     readSaved();render();selectTab('params');changeResponse('pretty');
-    renderExampleGallery();initGraphExplorer();
+    renderExampleGallery();initGraphExplorer();initGraphWizard();initSwagger();
     for(const tab of document.querySelectorAll('[data-tab]'))tab.addEventListener('click',()=>selectTab(tab.dataset.tab));
     for(const tab of document.querySelectorAll('[data-response]'))tab.addEventListener('click',()=>changeResponse(tab.dataset.response));
     $('addParam').addEventListener('click',()=>{state.params.push({key:'',value:''});renderRows('params');});
