@@ -12,7 +12,15 @@ assert 'window.MIGHTORA_OFFLINE=true' in html
 assert "connect-src 'none'" in html
 assert 'Offline Edition – No Internet Connection Required' in html
 assert 'logo-light="data:image/' in html
-assert 'https://cdn.jsdelivr.net' not in html
+# Comments and source strings may mention URLs; only actual loaded resources count.
+assert 'class MightoraFooter extends HTMLElement' in html
+assert 'window.fetch=(input)' in html
+assert html.index('window.fetch=(input)') < html.index('customElements.define(\'mightora-footer\'')
+assert 'https://mightora.io/about/' in html
+assert '<mightora-footer yaml-url="footer.yaml">' in html
+assert "url('https://cdn.jsdelivr.net" not in html
+assert 'https://mightora.io/about/' in (dist/'footer.yaml').read_text()
+assert 'url: "/about/"' not in (dist/'footer.yaml').read_text()
 class ExternalResources(HTMLParser):
     def __init__(self): super().__init__();self.matches=[]
     def handle_starttag(self,tag,attrs):
@@ -29,4 +37,4 @@ with zipfile.ZipFile(dist/'downloads/mightora-rest-studio-offline.zip') as z:
 assert (dist/'src/app.js').read_text()==src
 assert (dist/'widget.js').read_text()==(root/'widget.js').read_text()
 assert (dist/'CNAME').read_text().strip()=='rest.mightora.io'
-print('PASS: same sources, local-only offline edition, restricted CSP, current ZIP and CNAME')
+print('PASS: shared Mightora footer renders offline, no external resources, current ZIP and CNAME')
