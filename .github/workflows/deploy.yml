@@ -29,6 +29,15 @@ jobs:
           curl --fail --location --show-error --silent --retry 3 \
             'https://raw.githubusercontent.com/mightora/mightora.io/main/static/images/mightoraIoLogo4-200x900.png' \
             --output assets/mightora-logo.png
+          # Bundle the official shared UI at build time for offline use.
+          for file in shared.css components.js footer.yaml ian-tweedie-presenting-4.png ian-tweedie-sq2.png main-logo.png; do
+            curl --fail --location --show-error --silent --retry 3 \
+              "https://raw.githubusercontent.com/mightora/shared-ui/main/$file" \
+              --output "assets/$file"
+          done
+          curl --fail --location --show-error --silent --retry 3 \
+            'https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js' \
+            --output assets/js-yaml.min.js
       - name: Build online and offline editions
         env:
           REQUIRE_OFFICIAL_LOGO: '1'
