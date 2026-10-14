@@ -29,6 +29,11 @@ jobs:
           curl --fail --location --show-error --silent --retry 3 \
             'https://raw.githubusercontent.com/mightora/mightora.io/main/static/images/mightoraIoLogo4-200x900.png' \
             --output assets/mightora-logo.png
+          for file in TechTweedie_bw.png tweedTechnologyLogoLight.png; do
+            curl --fail --location --show-error --silent --retry 3 \
+              "https://raw.githubusercontent.com/mightora/mightora.io/main/static/images/$file" \
+              --output "assets/$file"
+          done
           # Bundle the official shared UI at build time for offline use.
           for file in shared.css components.js footer.yaml ian-tweedie-presenting-4.png ian-tweedie-sq2.png main-logo.png; do
             curl --fail --location --show-error --silent --retry 3 \
