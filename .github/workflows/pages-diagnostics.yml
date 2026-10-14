@@ -1,0 +1,59 @@
+name: GitHub Pages diagnostic
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/pages-diagnostics.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect Pages settings through GitHub API
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          http=$(curl --silent --show-error --output /tmp/pages-status.json --write-out '%{http_code}' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GH_REPOSITORY}/pages")
+          echo "Pages API HTTP status: $http"
+          echo "### GitHub Pages configuration" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Pages API returned HTTP `$http`" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$http" = "200" ]; then
+            python3 - <<'PY'
+          import json,os
+          x=json.load(open('/tmp/pages-status.json'))
+          for name in ('status','html_url','cname','build_type','https_enforced','public'):
+              print(f'{name}: {x.get(name)}')
+              with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+                  f.write(f'- {name}: `{x.get(name)}`\n')
+          PY
+          else
+            cat /tmp/pages-status.json
+            echo "- If HTTP 404, activate Settings → Pages → Source: GitHub Actions." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Inspect current public DNS
+        run: |
+          echo '### Domain DNS records' >> "$GITHUB_STEP_SUMMARY"
+          for kind in CNAME A AAAA; do
+            echo "rest.mightora.io $kind:"
+            result=$(dig +time=3 +tries=1 +short "$kind" rest.mightora.io 2>&1 || true)
+            printf '%s\n' "$result"
+            echo "- $kind: `$result`" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo 'Expected GitHub Pages subdomain CNAME: rest.mightora.io → mightora.github.io (unless an intentional Cloudflare proxy is configured).'
+      - name: Inspect public HTTP responses
+        run: |
+          echo '### Website reachability' >> "$GITHUB_STEP_SUMMARY"
+          for url in https://rest.mightora.io/ https://mightora.github.io/rest.mightora.io/; do
+            echo "Checking $url"
+            result=$(curl --location --silent --show-error --output /dev/null \
+              --max-time 15 --write-out 'HTTP %{http_code}, remote IP %{remote_ip}, final URL %{url_effective}' "$url" 2>&1 || true)
+            echo "$result"
+            echo "- `$url`: `$result`" >> "$GITHUB_STEP_SUMMARY"
+          done
