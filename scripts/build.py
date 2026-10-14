@@ -54,7 +54,8 @@ def portable_html():
     js=(ROOT/'src/app.js').read_text(encoding='utf8')
     examples_js=(ROOT/'src/examples.js').read_text(encoding='utf8')
     entra_js=(ROOT/'src/entra.js').read_text(encoding='utf8')
-    for script in (js,examples_js,entra_js):
+    swagger_js=(ROOT/'src/swagger.js').read_text(encoding='utf8')
+    for script in (js,examples_js,entra_js,swagger_js):
         assert '</script' not in script.lower(), 'Unsafe closing script tag in source'
     logo=logo_data()
     shared_css=asset_text('shared.css')
@@ -88,6 +89,7 @@ def portable_html():
     source=source.replace('<script defer src="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/components.js"></script>','<script>'+shared_js+'</script>')
     source=source.replace('<script defer src="src/examples.js"></script>','<script>\n'+examples_js+'\n</script>')
     source=source.replace('<script defer src="src/entra.js"></script>','<script>\n'+entra_js+'\n</script>')
+    source=source.replace('<script defer src="src/swagger.js"></script>','<script>\n'+swagger_js+'\n</script>')
     source=source.replace('<script defer src="src/app.js"></script>','<script>\n'+js+'\n</script>')
     source=source.replace(LOGO,logo)
     source=source.replace('https://techtweedie.github.io/images/author/ian-tweedie-sq2_hu_a380911c6f4726de.png',asset_png('ian-tweedie-sq2.png','IT'))
@@ -105,7 +107,7 @@ def portable_html():
 
 def main():
     DOWNLOADS.mkdir(parents=True,exist_ok=True)
-    files=['index.html','widget.js','auth-callback.html','src/app.js','src/examples.js','src/entra.js','src/styles.css','assets/favicon.svg','LICENSE','README.md','CNAME','robots.txt','sitemap.xml']
+    files=['index.html','widget.js','auth-callback.html','src/app.js','src/examples.js','src/entra.js','src/swagger.js','src/styles.css','assets/favicon.svg','LICENSE','README.md','CNAME','robots.txt','sitemap.xml']
     for relative in files:
         target=DIST/relative
         target.parent.mkdir(parents=True,exist_ok=True)
