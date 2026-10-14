@@ -310,7 +310,7 @@
       if(wizardStep===2){
         const tenant=$('graphTenant').value.trim(),client=$('graphClient').value.trim();
         const guid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        const domain=/^(?:[a-z0-9][a-z0-9-]{0,61}\\.)+[a-z]{2,63}$/i;
+        const domain=/^(?:[a-z0-9][a-z0-9-]{0,61}\.)+[a-z]{2,63}$/i;
         if(!guid.test(client)||!(guid.test(tenant)||domain.test(tenant))){
           updateGraphStatus('Enter the correct Application ID and tenant ID (or tenant domain) before continuing.',true);
           $('graphWizardStatus').textContent='Check the two IDs in Step 3';
