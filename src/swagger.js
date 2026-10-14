@@ -156,5 +156,30 @@
    const doc={swagger:'2.0',info:{title,version:'1.0.0',description:'Scaffold generated from saved REST Studio requests. Review parameter types, schemas, responses, authentication and examples before publishing.'},host,basePath:'/',schemes:[scheme],produces:['application/json'],paths};
    return {doc,count,skipped,host};
  }
- window.MightoraSwagger=Object.freeze({parse,importSwagger,exportSwagger});
+ const demo={
+   swagger:'2.0',
+   info:{title:'JSONPlaceholder Playground (Swagger 2.0)',version:'1.0.0',
+     description:'Learn how Swagger 2.0 describes HTTP operations. JSONPlaceholder provides simulated API writes.'},
+   schemes:['https'],host:'jsonplaceholder.typicode.com',basePath:'/',
+   consumes:['application/json'],produces:['application/json'],
+   definitions:{NewPost:{type:'object',properties:{
+     title:{type:'string',example:'Hello from Mightora REST Studio'},
+     body:{type:'string',example:'Try Swagger 2.0 importing'},
+     userId:{type:'integer',example:1}
+   }}},
+   paths:{
+     '/posts':{
+       get:{summary:'List example posts',parameters:[{name:'userId',in:'query',type:'integer',default:1}],
+         responses:{'200':{description:'Returns sample posts'}}},
+       post:{summary:'Simulate creating a post',consumes:['application/json'],
+         parameters:[{name:'body',in:'body',schema:{$ref:'#/definitions/NewPost'}}],
+         responses:{'201':{description:'Simulated post created'}}}
+     },
+     '/posts/{id}':{
+       get:{summary:'Get a post by ID',parameters:[{name:'id',in:'path',required:true,type:'integer',default:1}],
+         responses:{'200':{description:'Returns a sample post'}}}
+     }
+   }
+ };
+ window.MightoraSwagger=Object.freeze({parse,importSwagger,exportSwagger,demo:Object.freeze(demo)});
 })();
