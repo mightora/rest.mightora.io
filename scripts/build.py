@@ -64,12 +64,7 @@ def portable_html():
     for body in (shared_js, yaml_js):
         assert '</script' not in body.lower(), 'Unexpected closing script tag in shared UI'
     source=source.replace('<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/shared.css">','<style>'+shared_css+'</style>')
-    source=source.replace('<link rel="stylesheet" href="src/styles.css">','<style>'+css.replace('</style','<\\/style')+'''
-.offline-nav{display:flex;flex-wrap:wrap;gap:18px;background:#fff;padding:10px 24px;border-bottom:1px solid #ddd}
-.offline-nav a{color:#17355d;font-weight:700}
-.offline-nav-toggle{display:none}
-@media(max-width:560px){.offline-nav{gap:12px;font-size:.9rem}}
-'''+ '</style>')
+    source=source.replace('<link rel="stylesheet" href="src/styles.css">','<style>'+css.replace('</style','<\\/style')+'</style>')
     favicon=(ROOT/'assets/favicon.svg').read_text(encoding='utf8')
     source=source.replace('<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">','<link rel="icon" type="image/svg+xml" href="'+svg_data(favicon)+'">')
     source=re.sub(r'<script>\s*// Required Mightora footer\.yaml.*?</script>','',source,flags=re.DOTALL)
@@ -86,7 +81,6 @@ def portable_html():
     source=re.sub(r'<img alt="Build and deploy status" src="[^"]+">','<span class="evidence-label">Build and deployment evidence ↗</span>',source)
     source=re.sub(r'<img alt="CodeQL analysis status" src="[^"]+">','<span class="evidence-label">CodeQL workflow ↗</span>',source)
     source=re.sub(r'<img alt="MIT licence" src="[^"]+">','<span class="evidence-label">MIT licence ↗</span>',source)
-    source=source.replace('</mightora-header>','</mightora-header><nav class="offline-nav" aria-label="Offline navigation"><a href="#workspace">Builder</a><a href="#embed">Embed</a><a href="#downloads">Downloads</a><a href="#privacy">Network transparency</a><a href="#guide">Guide</a></nav>')
     source=source.replace('<button id="previewWidget" class="btn primary" type="button">Open panel preview ↗</button>','<span>Floating panel preview is available in the hosted edition.</span>')
     source=source.replace('<a id="downloadHtml" class="btn primary" href="downloads/rest-studio-offline.html" download>Download standalone HTML</a>','<span>Already using the standalone offline HTML</span>')
     source=source.replace('<a id="downloadZip" class="btn subtle" href="downloads/mightora-rest-studio-offline.zip" download>Download offline ZIP</a>','')
