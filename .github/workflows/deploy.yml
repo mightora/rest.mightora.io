@@ -51,6 +51,8 @@ jobs:
         env:
           REQUIRE_OFFICIAL_LOGO: '1'
         run: npm run test:build
+      - name: Browser smoke test (hosted and offline)
+        run: python3 scripts/browser_smoke.py
       - name: Configure GitHub Pages
         if: github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
