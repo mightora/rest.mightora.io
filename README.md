@@ -13,6 +13,33 @@
 - Downloads: standalone offline HTML and ZIP, generated from the same `src/app.js` and `src/styles.css` as online.
 - Transparent on-screen network domain summary and F12 inspection instructions.
 
+## Guided Microsoft Graph and Entra connection
+
+REST Studio includes a five-step wizard aimed at developers who are new to Microsoft Entra ID:
+
+1. Register an application in your own Entra directory.
+2. Add the displayed callback URI under **Authentication → Single-page application**.
+3. Copy **Directory (tenant) ID** and **Application (client) ID** into the tool.
+4. Add the appropriate **delegated** Microsoft Graph permission in Entra, then sign in using OAuth 2.0 authorisation code **with PKCE**. Start with **User.Read**.
+5. Load a Graph sample and send its request.
+
+The Graph gallery labels each operation with the permission it needs. If the required permission changes, users sign in again with that permission. Sign-in is disabled inside the floating iframe and offline edition; open the full secure site in a browser tab. Access tokens are kept in memory, never exported, and only attach to Graph endpoints. No client secrets, shared tenants, server-side auth relay or app-only tokens are supported. Tenant policy and administrator consent can prevent a user from signing in.
+
+Official Microsoft references:
+- https://learn.microsoft.com/en-us/entra/identity-platform/scenario-spa-app-configuration
+- https://learn.microsoft.com/en-us/graph/permissions-overview
+- https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow
+
+## Swagger/OpenAPI 2.0 import and export
+
+The **Swagger 2.0** section can import `.json`, `.yaml` and `.yml` definitions saved on the user's device. The parser works entirely in the browser; no file is uploaded or external `$ref` resolved. It reads HTTP operations, path/query/header parameters, local `#/definitions` references and representative request bodies, with an optional server URL override. Imported operations can be loaded individually or saved into the local collection (up to the 60-request collection limit).
+
+Users can export the current and saved requests for the current API host as a Swagger **2.0** JSON or YAML file. This is a request-derived starting specification, *not* a faithful reverse-engineering of response schemas, security schemes, HTTP semantics or server capabilities. Only one host is exported at a time; the UI reports skipped requests and possible conflicts. Sensitive header and query-parameter names are stripped.
+
+Known limitations: Swagger 1.x and OpenAPI 3.x are not accepted by this specific importer; external `$ref`, multipart/form-data, OAuth securityDefinitions execution and server-side API requests are unsupported. Swagger path parameters must be replaced with real values before sending requests. The offline edition supports importing, browsing and exporting Swagger definitions, but it cannot issue network requests.
+
+Swagger v2 reference: https://swagger.io/specification/v2/
+
 ## Deployment to GitHub Pages
 
 1. Public repository: `mightora/rest.mightora.io`.
