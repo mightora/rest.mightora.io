@@ -34,20 +34,42 @@ jobs:
             > /tmp/rest-offline-dom.html 2>/tmp/rest-offline-chrome.log
           python3 - <<'PY'
           from pathlib import Path
-          import re
+          from html.parser import HTMLParser
+          class FooterInspector(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.in_footer=False
+                  self.cols=0
+                  self.brands=0
+                  self.headings=[]
+                  self.heading=False
+                  self.links=[]
+              def handle_starttag(self,tag,attrs):
+                  if tag=='mightora-footer':self.in_footer=True
+                  if not self.in_footer:return
+                  a=dict(attrs)
+                  classes=set(a.get('class','').split())
+                  if tag=='div' and 'footer-col' in classes:self.cols+=1
+                  if tag=='a' and 'footer-brand' in classes:self.brands+=1
+                  if tag=='div' and 'footer-section-title' in classes:self.heading=True
+                  if tag=='a':self.links.append(a.get('href',''))
+              def handle_data(self,data):
+                  if self.heading and data.strip():self.headings.append(data.strip())
+              def handle_endtag(self,tag):
+                  if tag=='div':self.heading=False
+                  if tag=='mightora-footer':self.in_footer=False
           for mode,filename in [('live','/tmp/rest-live-dom.html'),('offline','/tmp/rest-offline-dom.html')]:
               text=Path(filename).read_text()
-              cols=len(re.findall(r'class="footer-col"',text))
-              heading=re.findall(r'class="footer-section-title">([^<]+)',text)
-              brands=len(re.findall(r'class="footer-brand"',text))
+              dom=FooterInspector()
+              dom.feed(text)
               author=text.index('<mightora-author')
               footer=text.index('<mightora-footer')
               evidence=text.index('id="evidence"')
-              print(f'{mode}: columns={cols}, brand links={brands}, headings={heading}')
-              assert cols==3, f'{mode}: expected 3 shared footer columns'
-              assert brands>=3, f'{mode}: expected shared brand card links'
+              print(f'{mode}: columns={dom.cols}, brand links={dom.brands}, headings={dom.headings}')
+              assert dom.cols==3, f'{mode}: expected 3 shared footer columns'
+              assert dom.brands>=3, f'{mode}: expected shared brand card links'
               assert evidence<author<footer, f'{mode}: author must precede footer'
-              assert 'https://mightora.io/about/' in text, f'{mode}: main-site relative links not corrected'
+              assert 'https://mightora.io/about/' in dom.links, f'{mode}: corporate link must go to Mightora.io'
               if mode=='offline':
                   assert "connect-src 'none'" in text, 'offline should block network connections'
                   assert 'data:image/png;base64' in text, 'offline brand imagery must be embedded'
