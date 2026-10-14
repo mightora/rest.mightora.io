@@ -35,7 +35,7 @@ def asset_png(name, fallback):
     path=ROOT/'assets'/name
     if path.exists():
         data=path.read_bytes()
-        assert data[:8]==b'\\x89PNG\\r\\n\\x1a\\n'.decode('unicode_escape').encode('latin1'), 'Expected PNG for '+name
+        assert data[:8]==b'\x89PNG\r\n\x1a\n', 'Expected PNG for '+name
         return 'data:image/png;base64,'+base64.b64encode(data).decode()
     if os.environ.get('REQUIRE_OFFICIAL_LOGO')=='1':
         raise RuntimeError('Missing required shared UI image: '+name)
@@ -45,7 +45,7 @@ def normalized_footer_yaml():
     yaml=asset_text('footer.yaml')
     # The shared Mightora footer contains root-relative corporate links.
     # Ensure these resolve to Mightora.io, not /about on each tools subdomain.
-    return re.sub(r'(?m)^(\\s*url:\\s*)"/([^"]+)"',
+    return re.sub(r'(?m)^(\s*url:\s*)"/([^"]+)"',
                   lambda m: m.group(1)+'"https://mightora.io/'+m.group(2)+'"', yaml)
 
 def portable_html():
