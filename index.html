@@ -198,5 +198,16 @@
   <script defer src="src/entra.js"></script>
   <script defer src="src/swagger.js"></script>
   <script defer src="src/app.js"></script>
+
+<!-- Cloudflare Web Analytics: production only; no network traffic when opened locally/offline -->
+<script>
+  if (window.location.hostname === 'rest.mightora.io') {
+    const analyticsBeacon = document.createElement('script');
+    analyticsBeacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+    analyticsBeacon.defer = true;
+    analyticsBeacon.setAttribute('data-cf-beacon', '{"token":"54355574b7594d3d9d9946038d33925a","spa":true}');
+    document.head.appendChild(analyticsBeacon);
+  }
+</script>
 </body>
 </html>
