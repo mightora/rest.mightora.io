@@ -362,6 +362,17 @@
       persist();renderSaved();
       reportSwagger('Saved '+newOps.length+' Swagger operations in this browser (60 total request limit, secrets excluded). Select the Saved tab to open them.');
     });
+    function presentSwagger(imported){
+      importedSwagger=imported;
+      picker.replaceChildren(new Option('Choose an API operation…',''));
+      imported.operations.forEach((o,i)=>picker.add(new Option(o.method+' '+o.path+' — '+o.label,String(i))));
+      picker.disabled=false;$('loadSwaggerOperation').disabled=true;$('saveSwaggerOperations').disabled=false;
+      reportSwagger('Imported '+imported.operations.length+' operations from "'+imported.title+'". Choose one to load, or save them locally.');
+    }
+    $('trySwaggerDemo').addEventListener('click',()=>{
+      $('swaggerHost').value='';
+      presentSwagger(window.MightoraSwagger.importSwagger(JSON.stringify(window.MightoraSwagger.demo)));
+    });
     browse.addEventListener('change',async()=>{
       const file=browse.files?.[0];
       if(!file)return;
@@ -371,11 +382,7 @@
         if(file.size>2*1024*1024)throw Error('The file must be 2 MiB or smaller.');
         const doc=await file.text();
         const imported=window.MightoraSwagger.importSwagger(doc,$('swaggerHost').value.trim());
-        importedSwagger=imported;
-        picker.replaceChildren(new Option('Choose an API operation…',''));
-        imported.operations.forEach((o,i)=>picker.add(new Option(o.method+' '+o.path+' — '+o.label,String(i))));
-        picker.disabled=false;$('saveSwaggerOperations').disabled=false;
-        reportSwagger('Imported '+imported.operations.length+' operations from "'+imported.title+'". Choose one to load, or save them locally.');
+        presentSwagger(imported);
       }catch(error){importedSwagger=null;reportSwagger(error.message,true);}
       finally{browse.value='';}
     });
