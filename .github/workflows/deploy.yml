@@ -1,0 +1,65 @@
+name: Build, test and deploy
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run source tests
+        run: npm test
+      - name: Obtain official Mightora logo for offline builds
+        run: |
+          curl --fail --location --show-error --silent --retry 3 \
+            'https://raw.githubusercontent.com/mightora/mightora.io/main/static/images/mightoraIoLogo4-200x900.png' \
+            --output assets/mightora-logo.png
+      - name: Build online and offline editions
+        env:
+          REQUIRE_OFFICIAL_LOGO: '1'
+        run: npm run build
+      - name: Test releases and offline isolation
+        env:
+          REQUIRE_OFFICIAL_LOGO: '1'
+        run: npm run test:build
+      - name: Configure GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Upload offline downloads
+        uses: actions/upload-artifact@v4
+        with:
+          name: mightora-rest-studio-offline
+          path: |
+            dist/downloads/rest-studio-offline.html
+            dist/downloads/mightora-rest-studio-offline.zip
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

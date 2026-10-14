@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://rest.mightora.io/sitemap.xml
