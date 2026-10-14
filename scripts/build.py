@@ -52,7 +52,10 @@ def portable_html():
     source=(ROOT/'index.html').read_text(encoding='utf8')
     css=(ROOT/'src/styles.css').read_text(encoding='utf8')
     js=(ROOT/'src/app.js').read_text(encoding='utf8')
-    assert '</script' not in js.lower(), 'Unsafe closing script tag in source'
+    examples_js=(ROOT/'src/examples.js').read_text(encoding='utf8')
+    entra_js=(ROOT/'src/entra.js').read_text(encoding='utf8')
+    for script in (js,examples_js,entra_js):
+        assert '</script' not in script.lower(), 'Unsafe closing script tag in source'
     logo=logo_data()
     shared_css=asset_text('shared.css')
     shared_js=asset_text('components.js')
@@ -73,6 +76,8 @@ def portable_html():
     shim='window.MIGHTORA_OFFLINE=true; const footerYaml='+json.dumps(footer_yaml)+'; window.fetch=(input)=>{const url=typeof input==="string"?input:input.url;return url.includes("footer.yaml")?Promise.resolve(new Response(footerYaml,{status:200,headers:{"Content-Type":"text/yaml"}})):Promise.reject(new TypeError("Offline edition blocks network requests"));};'
     source=source.replace('<script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>','<script>'+shim+'</script><script>'+yaml_js+'</script>')
     source=source.replace('<script defer src="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/components.js"></script>','<script>'+shared_js+'</script>')
+    source=source.replace('<script defer src="src/examples.js"></script>','<script>\n'+examples_js+'\n</script>')
+    source=source.replace('<script defer src="src/entra.js"></script>','<script>\n'+entra_js+'\n</script>')
     source=source.replace('<script defer src="src/app.js"></script>','<script>\n'+js+'\n</script>')
     source=source.replace(LOGO,logo)
     source=source.replace('https://techtweedie.github.io/images/author/ian-tweedie-sq2_hu_a380911c6f4726de.png',asset_png('ian-tweedie-sq2.png','IT'))
@@ -90,7 +95,7 @@ def portable_html():
 
 def main():
     DOWNLOADS.mkdir(parents=True,exist_ok=True)
-    files=['index.html','widget.js','src/app.js','src/styles.css','assets/favicon.svg','LICENSE','README.md','CNAME','robots.txt','sitemap.xml']
+    files=['index.html','widget.js','auth-callback.html','src/app.js','src/examples.js','src/entra.js','src/styles.css','assets/favicon.svg','LICENSE','README.md','CNAME','robots.txt','sitemap.xml']
     for relative in files:
         target=DIST/relative
         target.parent.mkdir(parents=True,exist_ok=True)
