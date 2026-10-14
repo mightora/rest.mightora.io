@@ -1,0 +1,52 @@
+name: Recover stuck GitHub Pages deployment
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/pages-recovery.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+jobs:
+  release-stale-deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check and cancel the confirmed stale deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          STALE_ID: f94adb4bd2b280dd8cf1a0e6c4658619033aa9de
+        run: |
+          set -euo pipefail
+          endpoint="https://api.github.com/repos/$REPO/pages/deployments/$STALE_ID"
+          header="Authorization: Bearer $GH_TOKEN"
+          http=$(curl --silent --show-error --output /tmp/previous.json --write-out '%{http_code}' \
+            -H "$header" -H "Accept: application/vnd.github+json" "$endpoint")
+          echo "Previous Pages deployment status endpoint returned HTTP $http"
+          cat /tmp/previous.json
+          echo
+          if [ "$http" != 200 ]; then
+            echo "Could not read the targeted deployment status. Nothing changed."
+            exit 1
+          fi
+          previous=$(python3 -c 'import json;print(json.load(open("/tmp/previous.json")).get("status","unknown"))')
+          echo "Previous deployment state: $previous"
+          if [ "$previous" = succeed ] || [ "$previous" = deployed ]; then
+            echo "The targeted deployment already succeeded; not cancelling it."
+            exit 0
+          fi
+          if [ "$previous" = canceled ] || [ "$previous" = cancelled ]; then
+            echo "The targeted deployment already says cancelled."
+            exit 0
+          fi
+          code=$(curl --silent --show-error --output /tmp/cancel.json --write-out '%{http_code}' \
+            --request POST -H "$header" -H "Accept: application/vnd.github+json" "$endpoint/cancel")
+          echo "Pages cancel returned HTTP $code"
+          cat /tmp/cancel.json
+          echo
+          if [ "$code" != 204 ]; then
+            echo "Cancel request was not acknowledged; check deployment state in Pages settings."
+            exit 1
+          fi
+          echo "Cancelled the exact stale deployment ID $STALE_ID"
