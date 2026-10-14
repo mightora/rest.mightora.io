@@ -68,12 +68,12 @@ def portable_html():
     favicon=(ROOT/'assets/favicon.svg').read_text(encoding='utf8')
     source=source.replace('<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">','<link rel="icon" type="image/svg+xml" href="'+svg_data(favicon)+'">')
     source=re.sub(r'<script>\s*// Required Mightora footer\.yaml.*?</script>','',source,flags=re.DOTALL)
-    source=source.replace('<script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>','<script>'+yaml_js+'</script>')
-    source=source.replace('<script defer src="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/components.js"></script>','<script>'+shared_js+'</script>')
-    # The offline edition intercepts all fetch calls: only the bundled YAML
-    # receives an in-memory Response. No actual resource is requested.
+    # The fetch shim must be installed BEFORE the custom elements register:
+    # customElements.define immediately connects existing footer elements.
     shim='window.MIGHTORA_OFFLINE=true; const footerYaml='+json.dumps(footer_yaml)+'; window.fetch=(input)=>{const url=typeof input==="string"?input:input.url;return url.includes("footer.yaml")?Promise.resolve(new Response(footerYaml,{status:200,headers:{"Content-Type":"text/yaml"}})):Promise.reject(new TypeError("Offline edition blocks network requests"));};'
-    source=source.replace('<script defer src="src/app.js"></script>','<script>'+shim+'</script><script>\n'+js+'\n</script>')
+    source=source.replace('<script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>','<script>'+shim+'</script><script>'+yaml_js+'</script>')
+    source=source.replace('<script defer src="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/components.js"></script>','<script>'+shared_js+'</script>')
+    source=source.replace('<script defer src="src/app.js"></script>','<script>\n'+js+'\n</script>')
     source=source.replace(LOGO,logo)
     source=source.replace('https://techtweedie.github.io/images/author/ian-tweedie-sq2_hu_a380911c6f4726de.png',asset_png('ian-tweedie-sq2.png','IT'))
     source=source.replace('https://raw.githubusercontent.com/TechTweedie/techtweedie.github.io/v2/assets/images/site/main-logo.png',asset_png('main-logo.png','TT'))
