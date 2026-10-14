@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "test": "node --test tests/*.test.js",
+    "test": "node --check src/app.js && node --check src/examples.js && node --check src/entra.js && node --check src/swagger.js && node --test tests/*.test.js",
     "build": "python3 scripts/build.py",
     "test:build": "python3 scripts/test_build.py"
   },
