@@ -76,7 +76,7 @@
        const url=resolveUrl(doc,path,override);
        const query=[], headers=[], pathParams=[];
        let body='', bodyType='none';
-       const params=[...(doc.parameters?[]:[]),...(Array.isArray(group.parameters)?group.parameters:[]),...(Array.isArray(op.parameters)?op.parameters:[])];
+       const params=[...(Array.isArray(group.parameters)?group.parameters:[]),...(Array.isArray(op.parameters)?op.parameters:[])];
        const unique=new Map();
        for(const rawParam of params){const p=ref(doc,rawParam);if(!p||!p.in||!p.name)continue;unique.set(p.in+':'+p.name,p);}
        for(const p of unique.values()){
@@ -95,8 +95,8 @@
        const selectedBody=(op.consumes||doc.consumes||[]).includes('application/json');
        if(body && !selectedBody && (op.consumes||doc.consumes||[]).includes('text/plain'))bodyType='text';
        if(bodyType==='json')headers.push({key:'Content-Type',value:'application/json'});
-       if(!url.hostname.endsWith('.example.com') && url.hostname!=='api.example.com'){} // Leave imported host unchanged.
-       const request={method:method.toUpperCase(),url:url.href,params:safeRows(query),headers:safeRows(headers),body,bodyType};
+       const templatedUrl=url.href.replace(/%7B/ig,'{').replace(/%7D/ig,'}');
+       const request={method:method.toUpperCase(),url:templatedUrl,params:safeRows(query),headers:safeRows(headers),body,bodyType};
        // A template path is never substituted with guessed identifiers.
        operations.push({id:'swagger-'+operations.length,label:clean(op.summary||op.operationId||method.toUpperCase()+' '+path).slice(0,140),
          method:method.toUpperCase(),path,description:clean(op.description||''),pathParams,request});
@@ -134,7 +134,7 @@
      if(url.host!==host||url.protocol!==initial.protocol){skipped++;continue;}
      const method=String(request.method||'GET').toLowerCase();
      if(!METHODS.has(method)){skipped++;continue;}
-     const path=url.pathname||'/';
+     const path=(url.pathname||'/').replace(/%7B/ig,'{').replace(/%7D/ig,'}');
      if(!paths[path])paths[path]={};
      if(paths[path][method]){skipped++;continue;}
      const p=[];
