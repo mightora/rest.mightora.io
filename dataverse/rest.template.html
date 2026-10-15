@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>Mightora REST Studio · Dataverse</title>
+<!--BUILD_CSP-->
+<style>/*BUILD_CSS*/</style>
+<!-- Dataverse-provided local platform dependency. Never from a CDN. -->
+<script src="ClientGlobalContext.js.aspx"></script>
+<script>/*BUILD_YAML*/</script>
+<script>/*BUILD_SWAGGER*/</script>
+<script>/*BUILD_APP*/</script>
+</head>
+<body>
+<a class="skip" href="#workspace">Skip to REST workspace</a>
+<header class="top">
+  <div class="top-inner">
+    <img src="<!--BRAND_LOGO-->" alt="Mightora" class="logo">
+    <div class="top-title"><strong>REST Studio</strong><span>For model-driven Power Apps</span></div>
+    <span id="connection" role="status" aria-live="polite" class="connection">Checking Dataverse…</span>
+  </div>
+</header>
+<main id="workspace" class="layout">
+  <section class="intro"><div><h1>Test your Dataverse API</h1>
+    <p>Use your existing model-driven app session to explore metadata, inspect data and run supported Dataverse REST operations. Requests stay inside this environment.</p>
+    <p class="warning">Live environment: read operations are safest. POST, PATCH and DELETE may change records and require confirmation.</p>
+  </div><div class="environment"><span>Current environment</span><strong id="environment">Not connected</strong><span id="userInfo"></span></div></section>
+  <nav class="nav" aria-label="Workspace sections">
+    <a href="#request">Request builder</a><a href="#discovery">Explore tables</a><a href="#swagger">Swagger 2.0</a><a href="#help">Help</a>
+  </nav>
+  <section class="workspace" id="request" aria-labelledby="requestTitle">
+    <div class="section-title"><h2 id="requestTitle">Request builder</h2><div class="flex">
+      <label for="sample">Example</label><select id="sample">
+        <option value="">Choose a Dataverse sample</option>
+        <option value="whoami">Who am I? · signed-in user</option>
+        <option value="tables">List table metadata</option>
+        <option value="accounts">First 10 accounts</option>
+        <option value="contacts">First 10 contacts</option>
+        <option value="version">Environment version</option>
+      </select>
+    </div></div>
+    <div class="request-line">
+      <label class="sr" for="method">HTTP method</label><select id="method"><option>GET</option><option>HEAD</option><option>POST</option><option>PATCH</option><option>DELETE</option></select>
+      <label class="sr" for="endpoint">Dataverse API endpoint</label>
+      <input id="endpoint" type="text" spellcheck="false" autocomplete="off" value="/api/data/v9.2/WhoAmI()" aria-describedby="endpointHint">
+      <button type="button" class="primary" id="send" disabled>Send request</button><button type="button" id="cancel" disabled>Cancel</button>
+    </div>
+    <p id="endpointHint" class="hint">Current environment only: <code>/api/data/v9.2/...</code>. No third-party domains, credentials or browser storage.</p>
+    <div class="columns">
+      <div class="pane">
+        <label for="body" class="field">JSON / text request body</label>
+        <textarea id="body" spellcheck="false" rows="8" placeholder='{"name":"Example"}' aria-describedby="bodyHint"></textarea>
+        <p id="bodyHint" class="hint">Used for POST and PATCH. Maximum 64 KiB. GET, HEAD and DELETE send no body.</p>
+        <details><summary>Advanced headers</summary>
+        <label for="headerText" class="field">Additional headers (one per line: Name: value)</label>
+        <textarea id="headerText" rows="4" spellcheck="false" placeholder="Prefer: odata.include-annotations=&quot;*&quot;"></textarea>
+        <p class="hint">Credentials, Authorization, Cookie, Host, Origin, Content-Length and sensitive headers are not accepted.</p></details>
+        <div class="actions"><button type="button" id="copyCurl">Copy cURL (no authentication)</button><button type="button" id="clear">Clear workspace</button></div>
+      </div>
+      <div class="pane">
+        <div class="response-top"><h3>Response</h3><span id="responseStatus" role="status" aria-live="polite">Ready</span></div>
+        <div class="actions"><button type="button" id="format">Formatted</button><button type="button" id="raw">Raw</button><button type="button" id="copyResponse">Copy</button><button type="button" id="downloadResponse">Download</button></div>
+        <pre id="response" tabindex="0" aria-label="Dataverse response content">Connect to your environment and run a query.</pre>
+        <p class="hint" id="requestDiagnostics"></p>
+      </div>
+    </div>
+  </section>
+  <section id="discovery" class="section">
+    <div class="section-title"><h2>Explore tables and columns</h2><button id="discover" type="button" disabled>Discover tables</button></div>
+    <p class="hint">Loads up to 75 table definitions from Dataverse using your own read permissions. No query is sent until you choose an action.</p>
+    <div class="explore-grid">
+      <div><label class="field" for="tableFilter">Find a table</label><input id="tableFilter" type="search" placeholder="Filter the loaded tables…" autocomplete="off">
+        <label class="field" for="tables">Tables (display and logical names)</label><select id="tables" size="9" aria-label="Select a Dataverse table"></select>
+      </div>
+      <div><h3 id="selectedTableName">Select a table</h3><p class="hint" id="tableDetail">Choose a table to build a query, load its columns or view relationships.</p>
+      <div class="actions"><button type="button" id="tableQuery" disabled>Query first 10 rows</button><button type="button" id="columns" disabled>Discover columns</button><button type="button" id="relationships" disabled>Relationships</button></div>
+      <pre id="metadata" tabindex="0">Table details appear here.</pre></div>
+    </div>
+    <p id="discoveryStatus" role="status" aria-live="polite" class="hint">Waiting for Dataverse connection.</p>
+  </section>
+  <section id="swagger" class="section"><h2>Swagger 2.0 definitions</h2>
+    <p>Import an existing Swagger 2.0 JSON or YAML definition into this builder, or export the current request as a starter Swagger 2.0 file. It is analysed locally. Only the current Dataverse environment can be called.</p>
+    <div class="swagger-grid">
+      <div><label class="field" for="swaggerFile">Import file (maximum 2 MiB)</label><input id="swaggerFile" type="file" accept=".json,.yaml,.yml">
+        <label class="field" for="swaggerOps">Select an operation</label><select id="swaggerOps" disabled><option value="">Import Swagger to see operations</option></select>
+        <button type="button" id="loadSwagger" disabled>Load operation</button>
+      </div>
+      <div><label class="field" for="swaggerTitle">Definition name</label><input id="swaggerTitle" value="My Dataverse REST API" maxlength="120">
+        <div class="actions"><button type="button" id="exportSwaggerJson">Export Swagger JSON</button><button type="button" id="exportSwaggerYaml">Export Swagger YAML</button></div>
+        <p class="hint">Generated definitions are request-based examples; verify API schemas, security, response codes and semantics before publishing.</p>
+      </div>
+    </div>
+    <p id="swaggerStatus" role="status" aria-live="polite" class="hint"></p>
+  </section>
+  <section id="help" class="section">
+    <h2>How does this connect?</h2>
+    <div class="help-grid">
+      <div><h3>1 · Open inside Power Apps</h3><p>Install as an HTML web resource, then add a Web resource page to your model-driven app navigation.</p></div>
+      <div><h3>2 · Use your existing sign-in</h3><p>The web resource reads the Dataverse context provided by Microsoft. It calls this environment's Web API using your current browser session; no token or password is entered.</p></div>
+      <div><h3>3 · Stay in your environment</h3><p>Only <code>/api/data/v9.2/</code> requests on the current environment are permitted. Microsoft Graph and other remote APIs require their own authentication and aren't available here.</p></div>
+      <div><h3>4 · Understand permissions</h3><p>401 means your session is unavailable, 403 means access is denied, and 404 may mean the endpoint or table doesn't exist. Changes run under your current user's Dataverse privileges.</p></div>
+    </div>
+    <p class="hint"><strong>Network transparency:</strong> Requests are made only when you connect to Dataverse or click a request/discovery action. There is no Mightora relay, analytics, tracking, saved credentials or automatic persistence of records. Press F12 → Network to inspect the activity. A live Dataverse connection is required; this edition is not an offline tool.</p>
+  </section>
+</main>
+<footer class="footer"><span>REST Studio for Dataverse · © Mightora</span><div><a href="https://mightora.io" target="_blank" rel="noopener noreferrer">Mightora</a><a href="https://github.com/mightora/rest.mightora.io" target="_blank" rel="noopener noreferrer">Source</a><a href="https://github.com/mightora/rest.mightora.io/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licence</a></div></footer>
+</body>
+</html>

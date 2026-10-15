@@ -105,6 +105,60 @@ def portable_html():
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src data:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">""")
     return source
 
+def hash_csp(value):
+    import hashlib
+    return "'sha256-"+base64.b64encode(hashlib.sha256(value.encode('utf8')).digest()).decode('ascii')+"'"
+
+def dataverse_html():
+    template=(ROOT/'dataverse/rest.template.html').read_text(encoding='utf8')
+    styles=(ROOT/'src/dataverse-rest.css').read_text(encoding='utf8')
+    app=(ROOT/'src/dataverse-rest.js').read_text(encoding='utf8')
+    swagger=(ROOT/'src/swagger.js').read_text(encoding='utf8')
+    yaml=asset_text('js-yaml.min.js')
+    logo=logo_data()
+    scripts=[yaml,swagger,app]
+    for source in scripts:
+        if '</script' in source.lower():
+            raise ValueError('Dataverse JavaScript must not close script elements')
+    if '</style' in styles.lower():
+        raise ValueError('Dataverse styles must not close style elements')
+    if not yaml and os.environ.get('REQUIRE_OFFICIAL_LOGO')=='1':
+        raise ValueError('Swagger YAML parser must be bundled in production')
+    # The only Dataverse-provided dependency is a SAME-ORIGIN platform file.
+    csp=("default-src 'none'; script-src 'self' "+" ".join(map(hash_csp,scripts))+
+         "; style-src "+hash_csp(styles)+
+         "; connect-src 'self'; img-src data:; font-src data:; "+
+         "object-src 'none'; frame-src 'none'; form-action 'none'; "+
+         "base-uri 'none'; manifest-src 'none'")
+    values={
+        '<!--BUILD_CSP-->':'<meta http-equiv="Content-Security-Policy" content="'+csp+'">',
+        '/*BUILD_CSS*/':styles,
+        '/*BUILD_YAML*/':yaml,
+        '/*BUILD_SWAGGER*/':swagger,
+        '/*BUILD_APP*/':app,
+        '<!--BRAND_LOGO-->':logo
+    }
+    for key,value in values.items():
+        if key not in template:raise ValueError('Missing Dataverse template marker '+key)
+        template=template.replace(key,value)
+    return template
+
+def publish_dataverse():
+    output=DIST/'dataverse/rest.html'
+    output.parent.mkdir(parents=True,exist_ok=True)
+    html=dataverse_html()
+    output.write_text(html,encoding='utf8')
+    shutil.copy2(ROOT/'dataverse/README.md',DIST/'dataverse/README.md')
+    command=ROOT/'dataverse/mightora_rest_command.js'
+    shutil.copy2(command,DIST/'dataverse/mightora_rest_command.js')
+    archive=DOWNLOADS/'rest-Dataverse.zip'
+    with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as z:
+        z.write(output,'rest.html')
+        z.write(command,'mightora_rest_command.js')
+        z.write(ROOT/'dataverse/README.md','README.md')
+        z.write(ROOT/'LICENSE','LICENSE')
+    print('Built authenticated Dataverse REST HTML web resource + installation ZIP')
+
 def main():
     DOWNLOADS.mkdir(parents=True,exist_ok=True)
     files=['index.html','widget.js','auth-callback.html','src/app.js','src/examples.js','src/entra.js','src/swagger.js','src/styles.css','assets/favicon.svg','LICENSE','README.md','CNAME','robots.txt','sitemap.xml']
@@ -122,5 +176,6 @@ def main():
         z.write(html_path,'index.html')
         z.write(ROOT/'README.md','README.md')
         z.write(ROOT/'LICENSE','LICENSE')
+    publish_dataverse()
     print('Built REST Studio Pages app + locally self-contained offline HTML/ZIP')
 if __name__=='__main__':main()
