@@ -58,3 +58,68 @@ test('browser code never collects or stores secrets',()=>{
  assert(source.includes("credentials:'same-origin'"));
  assert(source.includes("prompt("));
 });
+
+test('live user session read-only GET and permission failure are handled without secrets',async()=>{
+ const calls=[];const elements=new Map();
+ const el=id=>{
+   if(!elements.has(id))elements.set(id,{value:'',textContent:'',style:{},disabled:false,className:'',
+     addEventListener(){},setAttribute(){},replaceChildren(){},scrollIntoView(){}});
+   return elements.get(id);
+ };
+ const context={
+   window:{location:{href:'https://contoso.crm4.dynamics.com/WebResources/new_rest.html'},
+     GetGlobalContext:()=>({getClientUrl:()=> 'https://contoso.crm4.dynamics.com',userSettings:{userId:'{abc}'}}),
+     prompt:()=> 'EXECUTE'
+   },
+   document:{readyState:'complete',getElementById:el},
+   URL,Headers,AbortController,TextEncoder,TextDecoder,Promise,performance:{now:()=>10},setTimeout,clearTimeout,console,
+   fetch:async(url,opts)=>{calls.push({url,opts});return {ok:true,status:200,body:null,headers:new Headers()}}
+ };
+ vm.runInNewContext(source,context);
+ await new Promise(resolve=>setImmediate(resolve));
+ const api=context.window.MightoraDataverseRest;
+ await api.request({url:'/api/data/v9.2/accounts'});
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].opts.credentials,'same-origin');
+ assert.equal(calls[0].opts.mode,'same-origin');
+ assert.equal(calls[0].opts.method,'GET');
+ assert.equal(new URL(calls[0].url).searchParams.get('$top'),'50');
+});
+test('write operations need an explicit confirmation and never send on rejection',async()=>{
+ const calls=[];const elements=new Map();
+ const el=id=>{
+   if(!elements.has(id))elements.set(id,{value:'',textContent:'',style:{},disabled:false,className:'',
+     addEventListener(){},setAttribute(){},replaceChildren(){},scrollIntoView(){}});
+   return elements.get(id);
+ };
+ const context={
+   window:{location:{href:'https://contoso.crm4.dynamics.com/WebResources/new_rest.html'},
+     GetGlobalContext:()=>({getClientUrl:()=> 'https://contoso.crm4.dynamics.com'}),
+     prompt:()=> 'CANCEL'
+   },
+   document:{readyState:'complete',getElementById:el},
+   URL,Headers,AbortController,TextEncoder,TextDecoder,Promise,performance:{now:()=>1},setTimeout,clearTimeout,console,
+   fetch:async(url,opts)=>{calls.push({url,opts});return {ok:true,status:204,body:null,headers:new Headers()}}
+ };
+ vm.runInNewContext(source,context);
+ await new Promise(resolve=>setImmediate(resolve));
+ const api=context.window.MightoraDataverseRest;
+ await assert.rejects(api.request({method:'DELETE',url:'/api/data/v9.2/accounts(00000000-0000-0000-0000-000000000000)'}),/Write cancelled/);
+ assert.equal(calls.length,0);
+ context.window.prompt=()=> 'EXECUTE';
+ await api.request({method:'PATCH',url:'/api/data/v9.2/accounts(00000000-0000-0000-0000-000000000000)',body:'{"name":"test"}'});
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].opts.headers.get('If-Match'),'*');
+});
+test('permissions errors are surfaced as API failures',async()=>{
+ const elements=new Map();const el=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',style:{},disabled:false,className:'',
+   addEventListener(){},setAttribute(){},replaceChildren(){},scrollIntoView(){}});return elements.get(id)};
+ const context={window:{location:{href:'https://contoso.crm4.dynamics.com/WebResources/new_rest.html'},
+   GetGlobalContext:()=>({getClientUrl:()=> 'https://contoso.crm4.dynamics.com'})},
+   document:{readyState:'complete',getElementById:el},
+   URL,Headers,AbortController,TextEncoder,TextDecoder,Promise,performance:{now:()=>2},setTimeout,clearTimeout,console,
+   fetch:async()=>({ok:false,status:403,body:null,headers:new Headers()})};
+ vm.runInNewContext(source,context);
+ await new Promise(resolve=>setImmediate(resolve));
+ await assert.rejects(context.window.MightoraDataverseRest.request({url:'/api/data/v9.2/accounts'}),/HTTP 403/);
+});
