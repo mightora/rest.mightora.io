@@ -13,6 +13,21 @@
 - Downloads: standalone offline HTML and ZIP, generated from the same `src/app.js` and `src/styles.css` as online.
 - Transparent on-screen network domain summary and F12 inspection instructions.
 
+## Dataverse model-driven app edition
+
+A new **self-contained HTML web resource** and installation bundle are built from this repository:
+
+- Public download: https://rest.mightora.io/dataverse/rest.html
+- Installation ZIP: https://rest.mightora.io/downloads/rest-Dataverse.zip
+- Installation and upgrade instructions: https://rest.mightora.io/dataverse/README.md
+- Source and limitations: [dataverse/README.md](dataverse/README.md)
+
+The Dataverse edition keeps the REST Studio request-building purpose and shares the maintained Swagger 2.0 parser/exporter. It offers a compact branded workspace, HTTP GET/HEAD/POST/PATCH/DELETE for the **current** Dataverse Web API only, read-only table/column/relationship discovery, response inspection and explicit confirmation for writes. All requests run in the signed-in user's existing Dataverse browser session via same-origin fetch. It is not a cross-tenant token tool or an automatic Microsoft Graph connection.
+
+The HTML bundles all Mightora HTML, CSS, JavaScript, logo and YAML parser assets with a hashed CSP. The **only runtime platform dependency** is Microsoft-provided `ClientGlobalContext.js.aspx` hosted on the current Dataverse environment. This is necessary for supported global context access in sitemap web-resource pages; neither `Xrm` nor `parent.Xrm` is guaranteed in that context. No hosted Mightora code, analytics or request relay is required.
+
+The ZIP contains **individual web-resource files, not a Dataverse solution ZIP**. For setup, use an unmanaged solution, create a Webpage (HTML) resource, publish it and add a Web resource page to the app navigation. Tenant permission/security verification is still required. The edition is **not offline** because it needs Dataverse.
+
 ## Guided Microsoft Graph and Entra connection
 
 REST Studio includes a five-step wizard aimed at developers who are new to Microsoft Entra ID:
