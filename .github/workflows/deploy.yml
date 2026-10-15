@@ -53,6 +53,13 @@ jobs:
         run: npm run test:build
       - name: Browser smoke test (hosted and offline)
         run: python3 scripts/browser_smoke.py
+      - name: Upload Dataverse web resource package
+        uses: actions/upload-artifact@v4
+        with:
+          name: mightora-rest-dataverse
+          path: |
+            dist/dataverse/rest.html
+            dist/downloads/rest-Dataverse.zip
       - name: Configure GitHub Pages
         if: github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
