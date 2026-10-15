@@ -59,10 +59,10 @@ assert '<mightora-footer' not in dv
 csp=re.search(r'<meta http-equiv="Content-Security-Policy" content="([^"]+)">',dv)
 assert csp is not None,'Dataverse edition must have a CSP'
 policy=csp.group(1)
-for script in re.findall(r'<script(?:\\s+[^>]*)?>([\\s\\S]*?)</script>',dv):
+for script in re.findall(r'<script(?:\s+[^>]*)?>([\s\S]*?)</script>',dv):
     digest=base64.b64encode(hashlib.sha256(script.encode('utf8')).digest()).decode('ascii')
     assert "'sha256-"+digest+"'" in policy,'Inline JS missing its exact CSP hash'
-for style in re.findall(r'<style>([\\s\\S]*?)</style>',dv):
+for style in re.findall(r'<style>([\s\S]*?)</style>',dv):
     digest=base64.b64encode(hashlib.sha256(style.encode('utf8')).digest()).decode('ascii')
     assert "'sha256-"+digest+"'" in policy,'Inline CSS missing its exact CSP hash'
 class DataverseAssets(HTMLParser):
