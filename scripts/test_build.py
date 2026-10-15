@@ -60,6 +60,7 @@ csp=re.search(r'<meta http-equiv="Content-Security-Policy" content="([^"]+)">',d
 assert csp is not None,'Dataverse edition must have a CSP'
 policy=csp.group(1)
 for script in re.findall(r'<script(?:\s+[^>]*)?>([\s\S]*?)</script>',dv):
+    if not script.strip():continue  # Dataverse-provided helper has src and no inline code
     digest=base64.b64encode(hashlib.sha256(script.encode('utf8')).digest()).decode('ascii')
     assert "'sha256-"+digest+"'" in policy,'Inline JS missing its exact CSP hash'
 for style in re.findall(r'<style>([\s\S]*?)</style>',dv):
