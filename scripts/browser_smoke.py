@@ -62,3 +62,16 @@ with socketserver.TCPServer(('127.0.0.1',0),Handler) as server:
     finally:server.shutdown()
 chrome_dom((DIST/'downloads/rest-studio-offline.html').resolve().as_uri())
 print('PASS: hosted and offline Swagger 2.0 / Graph guides render in Chrome')
+
+# Dataverse standalone should render its compact UI, but fail closed when
+# opened directly from disk (there is no signed-in Microsoft context).
+path=(DIST/'dataverse/rest.html').resolve().as_uri()
+cmd=['google-chrome','--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage',
+     '--disable-extensions','--disable-background-networking','--no-first-run',
+     '--virtual-time-budget=6000','--dump-dom',path]
+dv=subprocess.run(cmd,capture_output=True,text=True,timeout=60)
+assert dv.returncode==0 and '<html' in dv.stdout,'Dataverse HTML did not render in Chromium'
+for text in ('Test your Dataverse API','ClientGlobalContext.js.aspx','Connection unavailable','Swagger 2.0 definitions'):
+    assert text in dv.stdout,'Missing Dataverse browser feature: '+text
+assert 'No Dataverse user' not in dv.stdout
+print('PASS: Dataverse edition renders without CDN assets and fails safely outside a model-driven app')
