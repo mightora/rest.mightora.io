@@ -33,7 +33,7 @@ function resolveContext(win=window){
  if(!gc||typeof gc.getClientUrl!=='function')throw Error('Dataverse context unavailable. Upload this HTML as a Dataverse Webpage web resource and open it from a signed-in model-driven app. The Microsoft ClientGlobalContext.js.aspx helper must load successfully.');
  const clientUrl=new URL(gc.getClientUrl());
  const pageUrl=new URL(win.location.href);
- if(clientUrl.protocol!=='https:'||clientUrl.origin!==pageUrl.origin||!/^\/WebResources\//i.test(pageUrl.pathname)){
+ if(clientUrl.protocol!=='https:'||clientUrl.origin!==pageUrl.origin||!/(?:^|\/)WebResources\//i.test(decodeURIComponent(pageUrl.pathname))){
    throw Error('This page is not running as a same-origin Dataverse web resource. Live requests have been disabled.');
  }
  return {origin:clientUrl.origin,userId:String(gc.userSettings?.userId||'').replace(/[{}]/g,''),organization:gc.organizationSettings?.uniqueName||clientUrl.hostname};
