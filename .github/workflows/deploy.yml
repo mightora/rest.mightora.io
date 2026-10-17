@@ -65,6 +65,10 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main'
+        - name: Bundle shared Mightora footer
+          uses: mightora/shared-ui/.github/actions/sync-footer@main
+          with:
+            output-directory: dist
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
